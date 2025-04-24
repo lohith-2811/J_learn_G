@@ -133,7 +133,7 @@ app.post('/auth/google', async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name: username, picture } = payload;
+    const { email, name: username } = payload;
     const createdAt = getISTTimestamp();
 
     const db = getDB();
@@ -149,8 +149,8 @@ app.post('/auth/google', async (req, res) => {
     if (user.rows.length === 0) {
       // Create new user if doesn't exist
       const result = await db.execute({
-        sql: 'INSERT INTO user_profiles (username, email, password_hash, is_google_auth, profile_picture, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-        args: [username, email, 'google_oauth', 1, picture, createdAt],
+        sql: 'INSERT INTO user_profiles (username, email, password_hash, is_google_auth, created_at) VALUES (?, ?, ?, ?, ?)',
+        args: [username, email, 'google_oauth', 1, createdAt],
       });
       userId = Number(result.lastInsertRowid);
 
@@ -161,10 +161,10 @@ app.post('/auth/google', async (req, res) => {
       });
     } else {
       userId = user.rows[0].user_id;
-      // Update last login and profile picture if changed
+      // Update last login
       await db.execute({
-        sql: 'UPDATE user_profiles SET last_login = ?, profile_picture = ? WHERE user_id = ?',
-        args: [getISTTimestamp(), picture, userId],
+        sql: 'UPDATE user_profiles SET last_login = ? WHERE user_id = ?',
+        args: [getISTTimestamp(), userId],
       });
     }
 
@@ -182,8 +182,7 @@ app.post('/auth/google', async (req, res) => {
       user: { 
         id: userId, 
         username, 
-        email, 
-        picture,
+        email,
         isGoogleAuth: true
       },
       isNewUser: user.rows.length === 0,
@@ -214,7 +213,7 @@ app.post('/login', async (req, res) => {
   try {
     const db = getDB();
     const result = await db.execute({
-      sql: 'SELECT user_id, username, email, password_hash, is_google_auth, profile_picture FROM user_profiles WHERE email = ?',
+      sql: 'SELECT user_id, username, email, password_hash, is_google_auth FROM user_profiles WHERE email = ?',
       args: [email],
     });
 
@@ -262,7 +261,6 @@ app.post('/login', async (req, res) => {
         id: user.user_id,
         username: user.username,
         email: user.email,
-        picture: user.profile_picture,
         isGoogleAuth: false
       },
       timestamp: loginTime
@@ -478,7 +476,7 @@ app.get('/profile', authenticateJWT, async (req, res) => {
   try {
     const db = getDB();
     const result = await db.execute({
-      sql: 'SELECT user_id, username, email, profile_picture, is_google_auth, created_at, last_login FROM user_profiles WHERE user_id = ?',
+      sql: 'SELECT user_id, username, email, is_google_auth, created_at, last_login FROM user_profiles WHERE user_id = ?',
       args: [req.user.id],
     });
 
@@ -496,7 +494,6 @@ app.get('/profile', authenticateJWT, async (req, res) => {
         id: user.user_id,
         username: user.username,
         email: user.email,
-        picture: user.profile_picture,
         isGoogleAuth: user.is_google_auth,
         createdAt: user.created_at,
         lastLogin: user.last_login
