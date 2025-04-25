@@ -477,7 +477,7 @@ app.get('/progress', authenticateJWT, async (req, res) => {
   try {
     const db = getDB();
     const result = await db.execute({
-      sql: 'SELECT * FROM user_progress WHERE user_id = ?',
+      sql: 'SELECT * FROM user_module_progress WHERE user_id = ?',
       args: [req.user.id],
     });
 
@@ -487,10 +487,7 @@ app.get('/progress', authenticateJWT, async (req, res) => {
     });
   } catch (err) {
     console.error('Progress fetch error:', err);
-    res.status(500).json({
-      error: 'Failed to fetch progress',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to fetch progress' });
   }
 });
 
